@@ -1,33 +1,23 @@
 <!--
   Sync Impact Report
   ===================
-  Version change: 1.1.0 → 1.2.0 (MINOR — new principle added)
+  Version change: 1.2.0 → 1.2.1 (PATCH — clarification of existing principle)
 
-  Modified principles: None (all existing principles I–IX unchanged)
+  Modified principles:
+    - Principle I: Git Discipline — rewritten for clarity and strict
+      enforcement. Now explicitly states that every /speckit.implement
+      invocation MUST end with a git commit as an automatic, unconditional
+      requirement. Added self-check enforcement steps, prohibited behaviors,
+      and failure-to-commit severity clause. Updated Development Workflow
+      task completion criteria to reinforce commit-before-respond rule.
 
-  Added sections:
-    - Principle X: Context7 Documentation-First Development
-    - Section: Context7 MCP Tools
-    - Section: Required Workflow — Two-Step Lookup
-    - Section: Pre-Mapped Library Registry
-    - Section: Mandatory Trigger Conditions
-    - Section: Query Writing Best Practices
-    - Section: Rate Limit Rules
-    - Section: Context7 Availability Detection
-    - Section: What Context7 is NOT For
-    - Section: Prohibited Practices (Context7-specific)
-
+  Added sections: None
   Removed sections: None
 
   Templates requiring updates:
-    - .specify/templates/plan-template.md — ✅ compatible (Constitution
-      Check section is generic; Context7 principle will be evaluated
-      per-feature during planning when library code is involved)
-    - .specify/templates/spec-template.md — ✅ compatible (no
-      constitution references requiring update)
-    - .specify/templates/tasks-template.md — ✅ compatible (Foundational
-      phase already covers dependency setup; Context7 lookups happen
-      inline during implementation tasks, not as separate tasks)
+    - .specify/templates/plan-template.md — ✅ compatible (no changes needed)
+    - .specify/templates/spec-template.md — ✅ compatible (no changes needed)
+    - .specify/templates/tasks-template.md — ✅ compatible (no changes needed)
 
   Follow-up TODOs: None
 -->
@@ -36,13 +26,43 @@
 
 ## Core Principles
 
-### I. Git Discipline (NON-NEGOTIABLE)
+### I. Git Discipline (NON-NEGOTIABLE — ZERO EXCEPTIONS)
 
-After every `/speckit.implement` command that completes successfully — meaning
-all files for that task are created or modified, the code compiles without
-errors, and no broken imports or syntax issues remain — the agent MUST
-immediately stage all changes and create a git commit BEFORE moving on to
-the next task or responding that the task is complete.
+**THE GOLDEN RULE:** Every `/speckit.implement` invocation MUST end with a
+git commit. There is NO scenario where `/speckit.implement` finishes and
+the agent does not commit. This is not optional. This is not conditional.
+This is an absolute, unbreakable requirement.
+
+**When to commit:**
+The agent MUST stage all changes and create a git commit as the FINAL
+action of every `/speckit.implement` command — immediately after
+implementation is complete and before the agent sends its completion
+summary to the user. The commit is part of the implementation, not a
+separate step. An implementation without a commit is an INCOMPLETE
+implementation.
+
+**What triggers a commit:**
+- `/speckit.implement` completes a full phase → commit ALL changes
+- `/speckit.implement` completes a partial phase (user-scoped, e.g.,
+  `phase1`) → commit ALL changes from that scope
+- `/speckit.implement` completes one or more tasks → commit ALL changes
+- If the agent runs out of context or hits a limit mid-implementation,
+  it MUST commit whatever work is done so far before stopping
+
+**The agent MUST NEVER:**
+- Respond to the user that implementation is done without having committed
+- Say "done" or "complete" or show a summary table without committing first
+- Skip the commit because "the user didn't ask" — the commit is automatic
+- Defer the commit to a later message or a follow-up command
+- Wait for the user to request a commit — the constitution requires it
+- Treat the commit as optional or as something the user must trigger
+
+**Enforcement — self-check before responding:**
+Before sending ANY completion message after `/speckit.implement`, the
+agent MUST verify:
+1. `git status` shows no unstaged implementation changes
+2. `git log -1 --oneline` shows a NEW commit from this session
+If either check fails, the agent MUST commit before responding.
 
 **Commit format** — Conventional Commits strictly enforced:
 
@@ -50,6 +70,8 @@ the next task or responding that the task is complete.
 <type>(<scope>): <short summary in imperative mood>
 
 <optional body — what changed and why, wrapped at 72 chars>
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 
 **Allowed types:** `feat`, `fix`, `refactor`, `style`, `chore`, `docs`, `test`
@@ -58,10 +80,12 @@ the next task or responding that the task is complete.
 `landing`, `auth`, `dashboard`, `editor`, `videos`, `bulk`, `settings`,
 `scraper`, `ai`, `remotion`, `stripe`, `i18n`, `theme`, `db`, `api`, `ui`
 
-**Rules:**
+**Commit message rules:**
 - Summary line MUST be under 72 characters.
 - MUST use imperative mood ("add login form" not "added login form").
 - Summary MUST describe WHAT was done, not HOW.
+- Body MUST reference which phase and task IDs were completed
+  (e.g., `Completes Phase 1: Setup (T001-T008)`).
 - If the task maps to a spec requirement, reference it in the body
   (e.g., `Implements FR-013, FR-014`).
 - If the task maps to a user story, reference it in the body
@@ -70,6 +94,12 @@ the next task or responding that the task is complete.
   mark it with a TODO comment and note that in the commit body.
 - Each commit MUST be atomic — one logical change per commit. If a single
   task touches multiple unrelated areas, split into multiple commits.
+- Multiple atomic commits per `/speckit.implement` run are allowed and
+  encouraged when the work spans distinct logical changes (e.g., one
+  commit for docs, one for setup, one for feature code).
+
+**Failure to commit is a constitution violation.** The agent must treat
+a missing commit with the same severity as shipping broken code.
 
 ### II. Design Quality (NON-NEGOTIABLE)
 
@@ -626,14 +656,16 @@ justified. All spacing, color, and typography MUST use design system tokens.
 
 ## Development Workflow
 
-**Task completion criteria:**
+**Task completion criteria — ALL must be met before responding to user:**
 1. All files for the task are created or modified.
 2. Code compiles without errors and has no broken imports.
 3. All user-facing strings use i18n keys.
 4. RTL logical properties used exclusively for layout.
 5. TypeScript strict mode passes with no `any` leaks.
 6. Context7 consulted for all library API usage per Principle X.
-7. Git commit created per Principle I before moving to next task.
+7. **Git commit created per Principle I.** This is the LAST step. The
+   agent MUST NOT send a completion response to the user until the commit
+   exists. A task without a commit is NOT complete — period.
 
 **Code review gates:**
 - Constitution compliance verified on every PR.
@@ -660,4 +692,4 @@ these principles. Violations MUST be corrected before merge. Complexity
 beyond what is described here MUST be justified in the plan's Complexity
 Tracking table.
 
-**Version**: 1.2.0 | **Ratified**: 2026-02-02 | **Last Amended**: 2026-02-02
+**Version**: 1.2.1 | **Ratified**: 2026-02-02 | **Last Amended**: 2026-02-02
